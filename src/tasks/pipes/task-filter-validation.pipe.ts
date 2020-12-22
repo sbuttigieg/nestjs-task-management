@@ -1,5 +1,5 @@
 import { BadRequestException, PipeTransform } from '@nestjs/common';
-import { TaskFilters } from '../task.model';
+import { TaskFilters } from '../task-filters.enum';
 
 export class TaskFilterValidationPipe implements PipeTransform {
   // I added this custom validation pipe to make sure that the query keys are valid
