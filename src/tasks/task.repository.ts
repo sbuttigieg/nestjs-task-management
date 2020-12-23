@@ -1,22 +1,20 @@
 import { EntityRepository, Repository } from 'typeorm';
 import { Task } from './task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
-import { TaskStatus } from './task-status.enum';
+import { TaskStatus } from './task.enum';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 
 @EntityRepository(Task)
 export class TaskRepository extends Repository<Task> {
-  // NOTE: async defines that a method is asynchronous. All async methods return a Promise
-
   async getTasks(filterDto: GetTasksFilterDto): Promise<Task[]> {
-    // here no error handling is included as the data was checked with a validation pipe in the controller
-    // returns all tasks in the db when there are no filter parameters
-    // returns the filtered tasks when there are filter parameters
-    // since more than one task could be returned the output is an array of tasks
-    // query builder is used to filter
-    // if status and/or search params are passed these are used in the query
-    // andWhere is used instead of where so that both status and search could be used in the same query
-    // the query.getMany method is used to get all the resulting tasks in the query
+    // SCOPE 1: returns all tasks in the db when there are no filter parameters
+    // SCOPE 2: returns the filtered tasks when there are filter parameters
+    // ERROR HANDLING: none as the data was checked with 2 validation pipes in the controller
+    // DETAILS 1: query builder is used to filter
+    // DETAILS 2: if status and/or search params are passed these are used in the query
+    // DETAILS 3: andWhere is used instead of where so that both status and search could be used in the same query
+    // DETAILS 4: the query.getMany method is used to get all the resulting tasks in the query
+    // RETURNS: since more than one task could be returned the output is a promise of an array of entity Task
     const { status, search } = filterDto;
     const query = this.createQueryBuilder('task');
     if (status) {
@@ -28,15 +26,15 @@ export class TaskRepository extends Repository<Task> {
         { search: `%${search}%` },
       );
     }
-    const tasks = await query.getMany();
-    return tasks;
+    return await query.getMany();
   }
 
   async createTask(createTaskDto: CreateTaskDto): Promise<Task> {
-    // retrieves title and description from the input DTO and creates a new Task with a default status Open
-    // here no error handling is included as the data was checked with a validation pipe in the controller
-    // the id is automatically generated
-    // the save method stores the data in the db
+    // SCOPE: create a new task
+    // ERROR HANDLING: none as the data was checked with a validation pipe in the controller
+    // DETAILS 1: the id is automatically generated
+    // DETAILS 2: the save method stores the data in the db
+    // RETURNS: a promise of an entity Task - the newly created task
     const task = new Task();
     const { title, description } = createTaskDto;
     task.title = title;
