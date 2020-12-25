@@ -6,8 +6,10 @@ export class AuthCredentialsDto {
   @MaxLength(20)
   username: string;
 
-  // password of length 8 to 20 characters, contains at least 1 upper case letter,
-  // at least 1 lower case letter and at least 1 number or special character
+  // NOTE 1a: password of length 8-20 characters
+  // NOTE 1b: contains at least 1 upper case letter
+  // NOTE 1c: contains at least 1 lower case letter
+  // NOTE 1d: contains at least 1 number or special character
   @IsString()
   @MinLength(8)
   @MaxLength(20)

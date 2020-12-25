@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { Task } from '../tasks/task.entity';
 
 @Entity()
-@Unique(['username']) // will generate a 23505 error if username is not unique
+@Unique(['username']) // generates a 23505 error if username is not unique
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
