@@ -1,6 +1,8 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, OneToMany } from 'typeorm';
+import { PrimaryGeneratedColumn } from 'typeorm';
 import { Unique } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Task } from '../tasks/task.entity';
 
 @Entity()
 @Unique(['username']) // will generate a 23505 error if username is not unique
@@ -16,6 +18,14 @@ export class User extends BaseEntity {
 
   @Column()
   salt: string;
+
+  // Note eager property:
+  // Eager is set to true on the user side.
+  // Whenever we retrieve the user as an object we can access user.tasks
+  // immediately and get an array of tasks owned by the same user.
+  // So one side of their relationship can be eager not both of them.
+  @OneToMany((type) => Task, (task) => task.user, { eager: true })
+  tasks: Task[];
 
   // SCOPE: validate password
   // ERROR HANDLING: none
