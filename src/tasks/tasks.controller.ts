@@ -1,71 +1,116 @@
-import { Body, Controller, Delete } from '@nestjs/common';
-import { ParseIntPipe, Query, UsePipes } from '@nestjs/common';
-import { Get, Param, Post, Patch, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Logger, UseGuards } from '@nestjs/common';
+import { Get, Param, Post, Patch, Query } from '@nestjs/common';
+import { ParseIntPipe, ValidationPipe } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { TasksService } from './tasks.service';
+import { Task } from './task.entity';
+import { TaskStatus } from './task.enum';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 import { TaskStatusValidationPipe } from './pipes/task-status-validation.pipe';
 import { TaskFilterValidationPipe } from './pipes/task-filter-validation.pipe';
-import { Task } from './task.entity';
-import { TaskStatus } from './task-status.enum';
+import { User } from '../auth/user.entity';
+import { GetUser } from '../auth/get-user.decorator';
 
+// NOTE 1a: Using AuthGuard - any request must included the access token that is
+// NOTE 1b: received when a user signs in
+// NOTE 2a: Strategy name was added such as to explicitly link
+// NOTE 2b: the AuthGuard to the strategy we wrote
 @Controller('tasks')
+@UseGuards(AuthGuard('jwt'))
 export class TasksController {
-  // NOTE: Dependency injection for TasksService is done within the constructor
+  private logger = new Logger('TaskController');
   constructor(private tasksService: TasksService) {}
 
-  // Request to retrieve all tasks or all task filtered by the params in the request query
-  // The parameters in the query are validated using 2 validation pipes
-  // first validation pipe checks with GetTasksFilterDto
-  // second validation pipe checks that actual filter params (not values) in the query are as per TaskFilters enum
-  // The @Query decorator gets parameters in the query part of the url (after the ? and separated by &)
-  // To validate the contents of the query, the validation pipes must be passed to the query,
-  // not in the UsePipes() decorator
+  // SCOPE 1a: for the signed-in user, retrieve all tasks or all task filtered
+  // SCOPE 1b: by the params in the request query
+  // ERROR HANDLING 1a: First the keys of the query are validated using a
+  // ERROR HANDLING 1a: custom validation pipe TaskFilterValidationPipe
+  // ERROR HANDLING 2a: Secondly the values in the query are validated using a
+  // ERROR HANDLING 2b: validation pipe to the GetTasksFilterDto
+  // DETAILS 1a: The @Query decorator gets parameters in the query part of the
+  // DETAILS 1b: url (after the ? and separated by &)
+  // DETAILS 2a: To validate the contents of the query, the validation pipes
+  // DETAILS 2b: must be passed to the query,
+  // DETAILS 3: not in the UsePipes() decorator
+  // DETAILS 4a: The user for the task is determined from the access token by
+  // DETAILS 4b: the @GetUser custom decorator
+  // RETURNS: a promise of an array of entity Task - the retrieved tasks
   @Get()
   getTasks(
-    @Query(ValidationPipe, TaskFilterValidationPipe)
+    @Query(TaskFilterValidationPipe, ValidationPipe)
     filterDto: GetTasksFilterDto,
+    @GetUser() user: User,
   ): Promise<Task[]> {
-    return this.tasksService.getTasks(filterDto);
+    this.logger.verbose(`User retrieving all tasks / filtered tasks.`);
+    return this.tasksService.getTasks(filterDto, user);
   }
 
-  // Request to retrieve a task by Id
-  // The id is validated to be a number with the ParseIntPipe
-  // Validation that the id actually exists in the db is done within the service
+  // SCOPE: to retrieve a task by Id and userId
+  // ERROR HANDLING 1: The id is validated to be a number with the ParseIntPipe
+  // ERROR HANDLING 2a: Validation that the id actually exists in the db is done
+  // ERROR HANDLING 2b: within the service
+  // DETAILS 1a: The user for the task is determined from the access token
+  // DETAILS 1b: by the@GetUser custom decorator
+  // RETURNS: a promise of an entity Task - the retrieved task
   @Get('/:id')
-  getTaskById(@Param('id', ParseIntPipe) id: number): Promise<Task> {
-    return this.tasksService.getTaskById(id);
+  getTaskById(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ): Promise<Task> {
+    this.logger.verbose(`User retrieving task by id`);
+    return this.tasksService.getTaskById(id, user);
   }
 
-  // Request to create a new task
-  // The parameters in the body are validated using a validation pipe to the CreateTaskDto
-  // TIP: One can optionally use createTask(@Body() body) to read the whole message body
-  // TIP: One can optionally use specific parameters from the body
-  // createTask(
-  //     @Body('title') title: string,
-  //     @Body('description') description: string,
-  // )
+  // SCOPE: to create a new task for the signed-in user
+  // ERROR HANDLING 1a: the keys in the body are validated using a validation
+  // ERROR HANDLING 1b: pipe to the CreateTaskDto
+  // ERROR HANDLING 2a: the keys must match otherwise an error is given since
+  // ERROR HANDLING 2b: they do not have the @IsOptional decorator
+  // ERROR HANDLING 3a: the values in the body are validated using a validation
+  // ERROR HANDLING 3b: pipe to the CreateTaskDto
+  // DETAILS 1a: The user for the task is determined from the access token by
+  // DETAILS 1b: the @GetUser custom decorator
+  // RETURNS: a promise of an entity Task - the newly created task
   @Post()
-  @UsePipes(ValidationPipe)
-  createTask(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.tasksService.createTask(createTaskDto);
+  createTask(
+    @Body(ValidationPipe) createTaskDto: CreateTaskDto,
+    @GetUser() user: User,
+  ): Promise<Task> {
+    this.logger.verbose(`User creating a new task`);
+    return this.tasksService.createTask(createTaskDto, user);
   }
 
-  // Request to delete a task
-  // The id is validated to be a number with the ParseIntPipe
-  // Validation that the id actually exists in the db is done within the service
+  // SCOPE: request to delete a task for the signed-in user
+  // ERROR HANDLING 1: The id is validated to be a number with the ParseIntPipe
+  // ERROR HANDLING 2a: Validation that the id actually exists in the db is done
+  // ERROR HANDLING 2b: within the service
+  // DETAILS 1a: The user for the task is determined from the access token by
+  // DETAILS 1b: the @GetUser custom decorator
+  // RETURNS: nothing, hence returns a void promise
   @Delete('/:id')
-  deleteTask(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.tasksService.deleteTask(id);
+  deleteTask(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ): Promise<void> {
+    this.logger.verbose(`User deleting task by id.`);
+    return this.tasksService.deleteTask(id, user);
   }
 
-  // Request to update the status of a task
-  // The status in the body is validated using a custom validation pipe
+  // SCOPE: request to update the status of a task for the signed-in user
+  // ERROR HANDLING 1: The id is validated to be a number with the ParseIntPipe
+  // ERROR HANDLING 2a: The status in the body is validated using a custom
+  // ERROR HANDLING 2b: validation pipe TaskStatusValidationPipe
+  // DETAILS 1a: The user for the task is determined from the access token by
+  // DETAILS 1b: the @GetUser custom decorator
+  // RETURNS: a promise of an entity Task - the updated task
   @Patch('/:id/status')
   updateTaskStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status', TaskStatusValidationPipe) status: TaskStatus,
+    @GetUser() user: User,
   ): Promise<Task> {
-    return this.tasksService.updateTaskStatus(id, status);
+    this.logger.verbose(`User updating task status`);
+    return this.tasksService.updateTaskStatus(id, status, user);
   }
 }
