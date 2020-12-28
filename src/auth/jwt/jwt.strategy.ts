@@ -9,6 +9,9 @@ import * as config from 'config';
 
 // Note 1a: Strategy name was added such as to explicitly link
 // Note 1b: the AuthGuard to this strategy
+// NOTE 2a: process.env.JWT_SECRET is used to override the config when required
+// NOTE 2b: to define a process.env, you place it before the start of the app
+// NOTE 2c: example: JWT_SECRET=XXX npm run start:dev or in package.json
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   private logger = new Logger('JwtStrategy');
