@@ -42,8 +42,8 @@ export class TasksService {
       throw new NotFoundException(`ID not found, Error #2050`);
     }
     this.logger.debug(
-      `Task ${id} retrieved successfully for "${user.username}",
-         Task: ${JSON.stringify(found)}`,
+      `Task ${id} retrieved successfully for "${user.username}", ` +
+        `Task: ${JSON.stringify(found)}`,
     );
     return found;
   }
